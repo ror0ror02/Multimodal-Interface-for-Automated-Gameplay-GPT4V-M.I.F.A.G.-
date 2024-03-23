@@ -118,11 +118,6 @@ def parse_response(response_text):
 
 def main():
 
-    """
-    The main function that prompts the user for the OpenAI API key and the screenshot interval,
-    then enters a loop where it takes screenshots, sends them to the model, and executes the model's commands.
-    """
-
     delayed_print("┌─────────────────────────────────────────────────────┐")
     delayed_print("│ Screenshot Bot │")
     delayed_print("├─────────────────────────────────────────────────────┤")
