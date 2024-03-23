@@ -1,0 +1,11 @@
+# Pillow (PIL) - used for capturing and saving screenshots
+Pillow==8.3.2
+
+# Requests - used for sending requests to the OpenAI API
+requests==2.25.1
+
+# Keyboard - used for simulating keyboard input
+keyboard==0.13.5
+
+# Winsound - used for playing sounds (delite if you on Linux)
+winsound==0.1.0
