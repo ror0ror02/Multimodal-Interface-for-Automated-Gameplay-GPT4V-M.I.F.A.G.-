@@ -36,7 +36,7 @@ The combination of visual understanding, natural language processing, and automa
 
 ## Usage
 
-1. Run the script with `python MIFAG.bot.py`.
+1. Run the script with `python MIFAG.bot.new.py`.
 2. Enter your OpenAI API key when prompted.
 3. Specify the interval (in seconds) between capturing screenshots.
 4. The script will start capturing screenshots from the game window and sending them to the GPT-4 Vision model for analysis.
