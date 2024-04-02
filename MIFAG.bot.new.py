@@ -33,8 +33,8 @@ import time
 from PIL import ImageGrab
 import keyboard
 import winsound  # delite if you on Linux
-from openai import OpenAI
 
+Max_request = 300 # ========== request_count here ==========
 
 def take_screenshot():
     screenshot = ImageGrab.grab()
@@ -45,41 +45,33 @@ def take_screenshot():
     return encoded_string
 
 def send_to_gpt4(api_key, image_base64, task, previous_actions, request_count):
-    if request_count >= 300:
-        print("Превышено ограничение в 300 запросов. Завершение работы.")
+    if request_count >= Max_request:
+        print("End Work.")
         return None, request_count
-
-    if request_count == 0:
-        print("Подготовка к захвату первого скриншота...")
-        for i in range(5, 0, -1):
-            print(f"Начало через {i} секунд...")
-            winsound.Beep(frequency, duration_s) 
-            time.sleep(1)
-        print("Старт!")
 
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}"
     }
     
-    system_content = "You are playing Garry's Mod and will receive screenshots from the game. Your task is to analyze the game state and provide the appropriate keyboard command to progress. Respond using the format: [key] (W A S D SPACE 1 2 3 4 5 6 7 8 9 E LEFT_TURN RIGHT_TURN Ctrl F1 MOUSE_UP MOUSE_DOWN Enter Y) [time] (1-6), : [comment for you] e.g., W 2 F 1 : [Your thoughts may be here] Do not include any additional text in your response."
+    system_content = "You are playing Garry's Mod and will receive screenshots from the game. Your task is to analyze the game state and provide the appropriate keyboard command to progress. Respond using the format: (key) (W A S D SPACE 1 2 3 4 5 6 7 8 9 E LEFT_TURN RIGHT_TURN Ctrl F1 MOUSE_UP MOUSE_DOWN Enter Y) (time) (1-6), : (comment for you) e.g., W 2 F 1 (You can write up to 10 actions per request.) : (Your thoughts may be here)  Do not include any additional text in your response. Considerable time can pass between screenshots, be ready for changes in the game and adapt."
     
     user_content = [
         {
             "type": "text",
-            "text": f"The current objective is to '{task}'. Action can be used: 'W' 'A' 'S' 'D' 'SPACE' '1' '2' '3' '4' '5' '6' '7' '8' '9' 'E' 'RMB' 'LMB' 'F' 'LEFT_TURN' 'RIGHT_TURN' 'Ctrl' 'F1' 'MOUSE_UP' 'MOUSE_DOWN 'Enter' 'Y'"
+            "text": f"The current objective is to '{task}'. This {request_count} request for you. Max request = {Max_request}, and you has stopped. Action can be used: 'W' 'A' 'S' 'D' 'SPACE' '1' '2' '3' '4' '5' '6' '7' '8' '9' 'E' 'RMB' 'LMB' 'F' 'LEFT_TURN' 'RIGHT_TURN' 'Ctrl' 'F1' 'MOUSE_UP' 'MOUSE_DOWN 'Enter' 'Y'"
         },
         {
             "type": "text",
-            "text": "Tips: Distances may appear larger than they are. (max time - 6 sec.) Use W for forward, A for left, S for backward, and D for right movement. If the target is not directly ahead, move left (A) or right (D) first, then forward (W). If you hit a wall, move backward (S). Follow any directional arrows in the screenshot (e.g., if an arrow points right, press D). Important: Do not use response formats like 'w d 10'. Instead, specify the direction (A or D) and time first, then forward (W) if needed. Interpret all visual hints in the screenshots, such as directional arrows, and respond accordingly."
+            "text": "Tips: Distances may appear larger than they are. (max time - 6 sec.) Use W for forward, A for left, S for backward, and D for right movement. If the target is not directly ahead, move left (A) or right (D) first, then forward (W). If you hit a wall, move backward (S). Follow any directional arrows in the screenshot (e.g., if an arrow points right, press D). Interpret all visual hints in the screenshots, such as directional arrows, and respond accordingly. If you notice that you are at a dead end, you can post messages about it in thoughts, For example, after the main thoughts you can write your status, be careful not to repeat the same actions, especially if you are at a dead end, and vice versa, if you shoot at someone or move without obvious signs of a dead end. Be careful to apply these actions after 3 unsuccessful attempts to escape. An example of movements from which you can throw yourself away from a dead end on 1 attempt: LEFT_TURN 15 W 2."
         },
         {
             "type": "text",
-            "text": "Situations: If you see an obstacle (wall, fence, object) directly in front of you: Move left (A) or right (D) depending on the target's location, then forward (W). Example: A 2, W 3. If the target is straight ahead: Move straight forward (W) for the distance to the target. Example: W 5. If you see a directional arrow in the screenshot: Follow the indicated direction: W for forward, A for left, S for backward, D for right. Example: D 3. If you are stuck or unable to move forward: Move backward (S), then try a different direction. Example: S 2, A 3, W 4. If the target is visible but far away: Estimate the distance and divide the time by 3. Move forward (W) for the estimated time. Example: W 7. If there are multiple paths or directions to choose from: Analyze the screenshot for visual clues (e.g., open doors, paths, arrows) and choose the most likely direction to reach the target. If you overwalk and Shoot! the target or move past it: Move backward (S) for a short time, then reassess the situation and adjust your direction accordingly. If you see an enemy (it's either a combine or a zombie), then shoot immediately. You can specify the duration of shooting if it is an assault rifle (example LMB (2-30) (example with a pistol or RPG LMB 1) If you see a first aid kit on the wall, depending on your health, go to it and press E (Healing time depends on your health in the lower left corner, if it is small, then hold the E button more. For explame, you health - 4 and you press E for 9 sec). Also, if you see a dark place, you can turn on the flashlight to F (time). But check, maybe it’s already turned on. Don't write like this: F1 1 : [Closing the spawn menu], W 6 LMB 1 : [Approaching the monster and preparing to fire the RPG] Write like this: F1 1, W 6 LMB 1 : [Closing the spawn menu, Approaching the monster and preparing to fire the RPG] (This explame!) You can also choose a weapon by creating a sequence of actions in numbers. Example: 5 1 5 1 LMB 1 [comment, you can write what you learned] This command gives you an RPG. (I repeat, not 5 1 LMB 1, but 5 1 5 1 LMB 1) You can also turn up and down using the commands 'MOUSE_UP', 'MOUSE_DOWN'. PLEASE DONT DEATH AND WALK TO WATER! Press SPACE to respawn on the entire translucent red screen."
+            "text": "Situations: If you see an obstacle (wall, fence, object) directly in front of you: Move left (A) or right (D) depending on the target's location, then forward (W). Example: A 2, W 3. If the target is straight ahead: Move straight forward (W) for the distance to the target. Example: W 5. If you see a directional arrow in the screenshot: Follow the indicated direction: W for forward, A for left, S for backward, D for right. Example: D 3. If you are stuck or unable to move forward: Move backward (S), then try a different direction. Example: S 2, A 3, W 4. If the target is visible but far away: Estimate the distance and divide the time by 3. Move forward (W) for the estimated time. Example: W 7. If there are multiple paths or directions to choose from: Analyze the screenshot for visual clues (e.g., open doors, paths, arrows) and choose the most likely direction to reach the target. If you overwalk and Shoot! the target or move past it: Move backward (S) for a short time, then reassess the situation and adjust your direction accordingly. If you see an enemy (it's either a combine or a zombie), then shoot immediately. You can specify the duration of shooting if it is an assault rifle (example LMB (2-30) (example with a pistol or RPG LMB 1) If you see a first aid kit on the wall, depending on your health, go to it and press E (Healing time depends on your health in the lower left corner, if it is small, then hold the E button more. For explame, you health - 4 and you press E for 9 sec). Also, if you see a dark place, you can turn on the flashlight to F (time). But check, maybe it’s already turned on. Don't write like this: F1 1 : [Closing the spawn menu], W 6 LMB 1 : [Approaching the monster and preparing to fire the RPG] Write like this: F1 1, W 6 LMB 1 : [Closing the spawn menu, Approaching the monster and preparing to fire the RPG] (This explame!) You can also choose a weapon by creating a sequence of actions in numbers. Example: 5 1 5 1 LMB 1 [comment, you can write what you learned] This command gives you an RPG. (I repeat, not 5 1 LMB 1, but 5 1 5 1 LMB 1) You can also turn up and down using the commands 'MOUSE_UP', 'MOUSE_DOWN'. PLEASE DONT DEATH AND WALK TO WATER! (Except for the tasks) Press SPACE to respawn on the entire translucent red screen. If you fall into the water or get lost, look for land or landmarks and move towards them. You can pop up by pressing the SPACE key and take other actions."
         },
         {
             "type": "text",
-            "text": f"Remember, your task is to '{task}'. Good luck! If you see a person pointing his hand to the side, then go in that direction. Use the number keys (1-9) for interacting with objects or performing specific actions as needed. Use the 'E' key to interact with objects or open doors when in close proximity. Use 'RMB' for right mouse button click and 'LMB' for left mouse button click when needed to interact with objects or perform specific actions. (For example, LMB (time) to Shoot! You can also execute more commands at once, for example W 5 A 6 S 2. F - flashlight. Commands LEFT_TURN and RIGHT_TURN They give you the opportunity to change. They work in the same way as all commands, only unlike them - here the seconds indicate the position. 1 second – 50 positions, Example: RIGHT_TURN 4 This command turns you 200 right positions in Garrys Mod. Use F1 to open spawn menu, and LMB for selection in spawn menu, and LEFT_TURN RIGHT_TURN MOUSE_UP MOUSE_DOWN to move the mouse. You can press the Y button and write something in the chat. For example Y 1 S 1 A 1 S 1 Enter 1 (write in chat)"
+            "text": f"Remember, your task is to '{task}'. Good luck! If you see a person pointing his hand to the side, then go in that direction. Use the number keys (1-9) for interacting with objects or performing specific actions as needed. Use the 'E' key to interact with objects or open doors when in close proximity. Use 'RMB' for right mouse button click and 'LMB' for left mouse button click when needed to interact with objects or perform specific actions. (For example, LMB (time) to Shoot! You can also execute more commands at once, for example W 5 A 6 S 2. F - flashlight. Commands LEFT_TURN and RIGHT_TURN They give you the opportunity to change. They work in the same way as all commands, only unlike them - here the seconds indicate the position. 1 second – 50 positions, Example: RIGHT_TURN 4 This command turns you 200 right positions in Garrys Mod. Use F1 to open spawn menu, and LMB for selection in spawn menu, and LEFT_TURN RIGHT_TURN MOUSE_UP MOUSE_DOWN to move the mouse. You can press the Y button and write something in the chat. For example Y 1 Y 1 A 1 Y 1 Enter 1 (write in chat)"
         },
         {
             "type": "text",
@@ -92,7 +84,7 @@ def send_to_gpt4(api_key, image_base64, task, previous_actions, request_count):
     ]
 
     payload = {
-        "model": "gpt-4-vision-preview",
+        "model": "gpt-4-vision-preview", # Model here
         "messages": [
             {
                 "role": "system",
@@ -109,6 +101,13 @@ def send_to_gpt4(api_key, image_base64, task, previous_actions, request_count):
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
     delayed_print(f"│ {response.content}")
     request_count += 1
+    
+    # Запись действий GPT-4 в файл
+    with open("MIFAG_actions.txt", "a") as file:
+        file.write(f"Request {request_count}:\n")
+        file.write(f"Task: {task}\n")
+        file.write(f"GPT-4 response: {response.json()['choices'][0]['message']['content']}\n\n")
+    
     return response.json(), request_count
 
 # sound set
@@ -116,7 +115,7 @@ def send_to_gpt4(api_key, image_base64, task, previous_actions, request_count):
 frequency = 200  # frequency in Hertz (e.g., A4)
 duration_s = 50  # duration in milliseconds (50 milliseconds)
 
-def delayed_print(text, delay=0.0):
+def delayed_print(text, delay=0.0): # 0.0 for max speed
     for char in text:
         print(char, end='', flush=True)
         time.sleep(delay)
