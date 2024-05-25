@@ -84,7 +84,7 @@ def send_to_gpt4(api_key, image_base64, task, previous_actions, request_count):
     ]
 
     payload = {
-        "model": "gpt-4-vision-preview", # Model here
+        "model": "gpt-4o", # Model here
         "messages": [
             {
                 "role": "system",
