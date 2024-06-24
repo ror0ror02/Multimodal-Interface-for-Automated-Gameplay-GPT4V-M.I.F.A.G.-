@@ -44,7 +44,7 @@ def take_screenshot():
         encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
     return encoded_string
 
-def send_to_gpt4(api_key, image_base64, task, previous_actions, request_count):
+def send_to_gpt4(api_key, base64_image, task, previous_actions, request_count):
     if request_count >= Max_request:
         print("End Work.")
         return None, request_count
@@ -54,7 +54,28 @@ def send_to_gpt4(api_key, image_base64, task, previous_actions, request_count):
         "Authorization": f"Bearer {api_key}"
     }
     
-    system_content = "You are playing Garry's Mod and will receive screenshots from the game. Your task is to analyze the game state and provide the appropriate keyboard command to progress. Respond using the format: (key) (W A S D SPACE 1 2 3 4 5 6 7 8 9 E LEFT_TURN RIGHT_TURN Ctrl F1 MOUSE_UP MOUSE_DOWN Enter Y) (time) (1-6), : (comment for you) e.g., W 2 F 1 (You can write up to 10 actions per request.) : (Your thoughts may be here)  Do not include any additional text in your response. Considerable time can pass between screenshots, be ready for changes in the game and adapt."
+    system_content = '''system_content = "You are playing Garry's Mod and will receive screenshots from the game. Your task is to analyze the game state and provide the appropriate keyboard command to progress. Respond using the format: (key) (W A S D SPACE 1 2 3 4 5 6 7 8 9 E LEFT_TURN RIGHT_TURN Ctrl F1 MOUSE_UP MOUSE_DOWN Enter Y) (time) (1-6), : (comment) e.g., W 2 F 1 (You can write up to 10 actions per request.) : (Your thoughts may be here) (: has been added to the response foreground)  Do not include any additional text in your response. Considerable time can pass between screenshots, be ready for changes in the game and adapt."
+
+"At the end of each response, after the main actions, create a simplified map of the current environment using the following symbols:
+. - free space
+| - wall
+P - player
+! - monster or danger
+E - goal
+
+Example map:
+
+.........
+...!.|...
+..P..E..
+.....|...
+.........
+
+please add markdown to end and start map.
+
+AND THE CARD IS MANDATORY AFTER : THIS MUST ALWAYS BE A CARD!!!
+
+The map should reflect the current position of the player, the location of walls, free space, and dangers based on the analysis of the screenshot. The size of the map may vary depending on the visible area in the screenshot. Update the map with each new screenshot to track the player's progress and surroundings.'''
     
     user_content = [
         {
@@ -75,13 +96,17 @@ def send_to_gpt4(api_key, image_base64, task, previous_actions, request_count):
         },
         {
             "type": "text",
-            "text": f"Previous actions: {', '.join(previous_actions[-20:])}"
+            "text": f"Previous actions: {', '.join(previous_actions[-10:])}"
         },
-        {
-            "type": "image_url",
-            "image_url": f"data:image/png;base64,{image_base64}"
+    {
+          "type": "image_url",
+          "image_url": {
+            "url": f"data:image/jpeg;base64,{base64_image}"
+          }
         }
-    ]
+      ]
+
+    
 
     payload = {
         "model": "gpt-4o", # Model here
@@ -106,7 +131,7 @@ def send_to_gpt4(api_key, image_base64, task, previous_actions, request_count):
     with open("MIFAG_actions.txt", "a") as file:
         file.write(f"Request {request_count}:\n")
         file.write(f"Task: {task}\n")
-        file.write(f"GPT-4 response: {response.json()['choices'][0]['message']['content']}\n\n")
+        file.write(f"GPT-4 response: {response}")
     
     return response.json(), request_count
 
@@ -244,13 +269,13 @@ def main():
         response, request_count = send_to_gpt4(api_key, screenshot_base64, task, previous_actions, request_count)
 
         # sound set
-        # delite if you on Linux
+        # delete if you are on Linux
         frequency = 500
         duration_s = 100
 
         
         if 'choices' in response:
-            winsound.Beep(frequency, duration_s) # delite if you on Linux
+            winsound.Beep(frequency, duration_s) # delete if you are on Linux
             delayed_print("│ │ Model response:")
             delayed_print("│ │")
             response_text = response['choices'][0]['message']['content']
@@ -264,6 +289,16 @@ def main():
                     delayed_print(f"│ │ Pressing key: {key} for {duration} seconds")
                     press_key(key, duration, comment)
                     previous_actions.append(f"{key} {duration} : {comment}")
+                    
+                # Extract and print the map
+                map_start = response_text.find("```")
+                map_end = response_text.find("```", map_start + 1)
+                if map_start != -1 and map_end != -1:
+                    map_text = response_text[map_start + 3:map_end].strip()
+                    delayed_print("│ │")
+                    delayed_print("│ │ Environment Map:")
+                    for line in map_text.split('\n'):
+                        delayed_print(f"│ │ {line}")
                     
             else:
                 delayed_print("│ │ Invalid model response format")
@@ -279,6 +314,9 @@ def main():
                 delayed_print(f"│ │ {line}")
         delayed_print("│ └───────────────────────────────────────────────────┘")
         
+        if request_count == 0:
+            time.sleep(1)
+
         time.sleep(interval)
 
 if __name__ == "__main__":
