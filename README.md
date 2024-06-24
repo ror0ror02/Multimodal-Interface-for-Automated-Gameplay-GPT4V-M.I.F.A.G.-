@@ -2,6 +2,8 @@
 
 M.I.F.A.G. is a Python application that leverages the power of OpenAI's GPT-4o Vision model to analyze screenshots from a game (in this case, Garry's Mod) and provide appropriate keyboard commands to progress through the game. This multimodal interface combines visual understanding and natural language processing to enable automated gameplay.
 
+M.I.F.A.G. Plays Garris Mod (Demo) - https://www.youtube.com/watch?v=z0oZKTjw8gI
+
 ## Features
 
 - **Screenshot Capture**: The application can capture screenshots from the game window at a specified interval (in seconds). This allows for continuous monitoring and analysis of the game state.
