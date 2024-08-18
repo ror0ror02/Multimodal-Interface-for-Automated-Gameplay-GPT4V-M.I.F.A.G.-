@@ -109,7 +109,7 @@ The map should reflect the current position of the player, the location of walls
     
 
     payload = {
-        "model": "gpt-4o", # Model here
+        "model": "chatgpt-4o-latest", # Model here
         "messages": [
             {
                 "role": "system",
